@@ -60,6 +60,9 @@ export default class FlashcardsLLMPlugin extends Plugin {
     const contents: string = await this.app.vault.read(file)
 
     let wholeText = contents
+
+    // Check if #generate tag is present
+    if (!wholeText.includes("#generate")) return;
   
     const headerRegex = /\n\n### Generated Flashcards\n/;
     const hasHeader = headerRegex.test(wholeText);
@@ -67,7 +70,6 @@ export default class FlashcardsLLMPlugin extends Plugin {
     // Check if the #flashcards tag is already present
     const tagRegex = /\n#flashcards.*\n/;
     const hasTag = tagRegex.test(wholeText);
-
 
     new Notice("Generating flashcards...");
     try {
@@ -88,6 +90,9 @@ export default class FlashcardsLLMPlugin extends Plugin {
       updatedText += "\n\n" + generatedCards.map((s: string) => s.trim()).join('\n\n');
 
       wholeText = wholeText.concat(updatedText)
+
+      const tagRegex = new RegExp(`\\#generate(\\s|$)`, 'g');
+      wholeText = wholeText.replace(tagRegex, '');
 
       new Notice("Flashcards succesfully generated!");
     } catch (error) {
