@@ -176,6 +176,19 @@ class FlashcardsSettingsTab extends PluginSettingTab {
       })
     );
 
+    new Setting(containerEl)
+    .setName("Flashcard generation tag")
+    .setDesc("Add this tag to files you want to generate flashcards for")
+    .addText((text) =>
+      text
+      .setPlaceholder("::")
+      .setValue(this.plugin.settings.generationTag)
+      .onChange(async (value) => {
+        this.plugin.settings.generationTag = value;
+        await this.plugin.saveSettings();
+      })
+    );
+
 
   }
 }
