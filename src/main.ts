@@ -75,7 +75,8 @@ export default class FlashcardsLLMPlugin extends Plugin {
 
 
       const newPosition: EditorPosition = {
-        line: editor.lastLine()
+        line: editor.lastLine(),
+        ch: 0
       }
       editor.setCursor(newPosition)
       new Notice("Flashcards succesfully generated!");
@@ -132,7 +133,6 @@ class FlashcardsSettingsTab extends PluginSettingTab {
     .setDesc("Which language model to use")
     .addDropdown((dropdown) =>
       dropdown
-      .addOption("text-davinci-003", "text-davinci-003")
       .addOption("gpt-3.5-turbo", "gpt-3.5-turbo")
       .addOption("gpt-4", "gpt-4")
       .setValue(this.plugin.settings.model)
