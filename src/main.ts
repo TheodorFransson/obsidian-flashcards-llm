@@ -5,12 +5,14 @@ interface FlashcardsSettings {
   apiKey: string;
   model: string;
   inlineSeparator: string;
+  generationTag: string;
 }
 
 const DEFAULT_SETTINGS: FlashcardsSettings = {
   apiKey: "",
   model: "gpt-4",
-  inlineSeparator: "::"
+  inlineSeparator: "::",
+  generationTag: "#generate"
 };
 
 export default class FlashcardsLLMPlugin extends Plugin {
@@ -62,7 +64,8 @@ export default class FlashcardsLLMPlugin extends Plugin {
     let wholeText = contents
 
     // Check if #generate tag is present
-    if (!wholeText.includes("#generate")) return;
+    const generateTag = this.settings.generationTag
+    if (!wholeText.includes(generateTag)) return;
   
     const headerRegex = /\n\n### Generated Flashcards\n/;
     const hasHeader = headerRegex.test(wholeText);
@@ -91,7 +94,7 @@ export default class FlashcardsLLMPlugin extends Plugin {
 
       wholeText = wholeText.concat(updatedText)
 
-      const tagRegex = new RegExp(`\\#generate(\\s|$)`, 'g');
+      const tagRegex = new RegExp(`\\${generateTag}(\\s|$)`, 'g');
       wholeText = wholeText.replace(tagRegex, '');
 
       new Notice("Flashcards succesfully generated!");
