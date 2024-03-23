@@ -1,4 +1,4 @@
-import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder, Vault } from 'obsidian';
 import { generateFlashcards } from "./flashcards";
 
 interface FlashcardsSettings {
@@ -9,7 +9,7 @@ interface FlashcardsSettings {
 
 const DEFAULT_SETTINGS: FlashcardsSettings = {
   apiKey: "",
-  model: "text-davinci-003",
+  model: "gpt-4",
   inlineSeparator: "::"
 };
 
@@ -19,31 +19,48 @@ export default class FlashcardsLLMPlugin extends Plugin {
   async onload() {
     await this.loadSettings();
 
-    this.addCommand({
-      id: "generate-flashcards",
-      name: "Generate Flashcards",
-      editorCallback: (editor: Editor, view: MarkdownView) => {
-        this.onGenerateFlashcards(editor, view);
-      },
-    });
-
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new FlashcardsSettingsTab(this.app, this));
+
+    this.registerEvent(
+      this.app.workspace.on("file-menu", (menu, file) => {
+        if (file instanceof TFolder) {
+          menu.addItem((item) => {
+            item
+              .setTitle("Generete flashcards")
+              .setIcon("cpu")
+              .onClick(async () => {
+                this.onGenerateFlashcards(file)
+              });
+          });
+        }
+      })
+    );
   }
 
-  async onGenerateFlashcards(editor: Editor, view: MarkdownView) {
+  async onGenerateFlashcards(file: TFolder) {
     const apiKey = this.settings.apiKey;
     if (!apiKey) {
       new Notice("API key is not set in plugin settings");
       return;
     }
 
-    const sep = this.settings.inlineSeparator
     const model = this.settings.model;
+    const sep = this.settings.inlineSeparator
 
-    const wholeText = editor.getValue()
-    const currentText = (editor.somethingSelected() ? editor.getSelection() : wholeText)
-    // Check if the header is already present
+    file.children.forEach((file) => {
+      if (file instanceof TFile) {
+        this.genereteFlashcards(file, apiKey, model, sep)
+      }
+    })
+
+  }
+
+  async genereteFlashcards(file: TFile, apiKey: string, model: string, sep: string | undefined) {
+    const contents: string = await this.app.vault.read(file)
+
+    let wholeText = contents
+  
     const headerRegex = /\n\n### Generated Flashcards\n/;
     const hasHeader = headerRegex.test(wholeText);
 
@@ -54,8 +71,7 @@ export default class FlashcardsLLMPlugin extends Plugin {
 
     new Notice("Generating flashcards...");
     try {
-      const generatedCards = (await generateFlashcards(currentText, apiKey, model, sep)).split("\n");
-      editor.setCursor(editor.lastLine())
+      const generatedCards = (await (generateFlashcards(wholeText, apiKey, model, sep))).split("\n");
 
       let updatedText = "";
 
@@ -69,22 +85,17 @@ export default class FlashcardsLLMPlugin extends Plugin {
         updatedText += "#flashcards\n";
       }
 
-      updatedText += "\n\n" + generatedCards.map(s => s.trim()).join('\n\n');
+      updatedText += "\n\n" + generatedCards.map((s: string) => s.trim()).join('\n\n');
 
-      editor.replaceRange(updatedText, editor.getCursor())
+      wholeText = wholeText.concat(updatedText)
 
-
-      const newPosition: EditorPosition = {
-        line: editor.lastLine(),
-        ch: 0
-      }
-      editor.setCursor(newPosition)
       new Notice("Flashcards succesfully generated!");
-
     } catch (error) {
       console.error("Error generating flashcards:", error);
       new Notice("Error generating flashcards. Please check the plugin console for details.");
     }
+
+    this.app.vault.modify(file, wholeText)
   }
 
   onunload() {
