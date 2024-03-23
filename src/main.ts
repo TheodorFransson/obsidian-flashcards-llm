@@ -134,6 +134,7 @@ class FlashcardsSettingsTab extends PluginSettingTab {
       dropdown
       .addOption("text-davinci-003", "text-davinci-003")
       .addOption("gpt-3.5-turbo", "gpt-3.5-turbo")
+      .addOption("gpt-4", "gpt-4")
       .setValue(this.plugin.settings.model)
       .onChange(async (value) => {
         this.plugin.settings.model = value;
